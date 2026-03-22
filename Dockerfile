@@ -4,7 +4,9 @@ FROM docker.io/library/python:${PYTHON_VERSION} AS base
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PORT=3000
+    PORT=3000 \
+    GUNICORN_TIMEOUT=600 \
+    GUNICORN_GRACEFUL_TIMEOUT=60
 
 WORKDIR /app
 
@@ -25,4 +27,4 @@ COPY . .
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "gunicorn main:app --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT}"]
+CMD ["sh", "-c", "gunicorn main:app --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT} --timeout ${GUNICORN_TIMEOUT} --graceful-timeout ${GUNICORN_GRACEFUL_TIMEOUT}"]

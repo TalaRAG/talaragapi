@@ -248,12 +248,16 @@ def _serialize_document(document, settings):
 
 def _enqueue_document_if_pending(document, settings, file_uploaded=True):
     if not file_uploaded:
+        logger.info("Skipping enqueue for document_id=%s because no new file was uploaded", document.id)
         return False
     if document.status != "pending":
+        logger.info("Skipping enqueue for document_id=%s because status=%s", document.id, document.status)
         return False
     if not document.storage_key:
+        logger.warning("Skipping enqueue for document_id=%s because storage_key is missing", document.id)
         return False
     if not configured_sqs_queue():
+        logger.warning("Skipping enqueue for document_id=%s because SQS_QUEUE is not configured", document.id)
         return False
     return enqueue_document(settings, document.id, document.storage_key)
 
