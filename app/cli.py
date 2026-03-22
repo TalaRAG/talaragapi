@@ -163,6 +163,25 @@ def run_db_current(_args):
     return _run_command(["alembic", "current"], env=_command_env())
 
 
+def run_db_seed(_args):
+    from app.db import db
+    from app.operations.users.seed import Seed
+
+    settings = _active_settings()
+    db.configure(settings.SQLALCHEMY_DATABASE_URI)
+
+    session = db.session()
+    try:
+        cmd = Seed(session)
+        cmd.execute()
+    finally:
+        session.close()
+
+    action = "Created" if cmd.created else "Updated"
+    print(f"{action} default admin user: {cmd.user.email}")
+    return 0
+
+
 def run_routes(_args):
     print("Routes: /health, /login, /users, /documents, /public/documents, /public/document_types, /inquire, /uploads, /files/{key}")
     return 0
@@ -214,6 +233,9 @@ def build_parser():
 
     db_current_parser = subparsers.add_parser("db.current", help="Show current revision")
     db_current_parser.set_defaults(handler=run_db_current)
+
+    db_seed_parser = subparsers.add_parser("db.seed", help="Seed the configured database")
+    db_seed_parser.set_defaults(handler=run_db_seed)
 
     routes_parser = subparsers.add_parser("routes", help="Print mounted routes")
     routes_parser.set_defaults(handler=run_routes)

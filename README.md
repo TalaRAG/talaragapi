@@ -11,6 +11,7 @@ source env/bin/activate
 pip install -r requirements.txt
 python -m app.cli db.create
 python -m app.cli db.upgrade
+python -m app.cli db.seed
 python -m app.cli server
 ```
 
@@ -59,6 +60,7 @@ Create the configured development database:
 ```bash
 python -m app.cli db.create
 python -m app.cli db.upgrade
+python -m app.cli db.seed
 ```
 
 Create the test database:
@@ -66,6 +68,14 @@ Create the test database:
 ```bash
 APP_ENV=test python -m app.cli db.create
 APP_ENV=test python -m app.cli db.upgrade
+APP_ENV=test python -m app.cli db.seed
+```
+
+The seed command creates or refreshes the default admin account:
+
+```text
+email: admin@example.com
+password: password
 ```
 
 ## 4. Run specs
