@@ -49,10 +49,12 @@ def create_database(settings):
     if not db_name:
         raise RuntimeError("Database name is missing from SQLALCHEMY_DATABASE_URI.")
 
+    admin_database = getattr(settings, "DB_ADMIN_DATABASE", "") or "postgres"
+
     try:
-        admin_url = url.set(database="postgres")
+        admin_url = url.set(database=admin_database)
     except AttributeError:
-        admin_url = url._replace(database="postgres")
+        admin_url = url._replace(database=admin_database)
 
     engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
     with engine.connect() as connection:

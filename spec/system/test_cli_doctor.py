@@ -17,6 +17,51 @@ def _settings(**overrides):
     return SimpleNamespace(**values)
 
 
+def test_create_database_uses_configured_admin_database(monkeypatch):
+    calls = []
+
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def execute(self, statement, params=None):
+            calls.append({"statement": str(statement), "params": params})
+
+            class FakeResult:
+                @staticmethod
+                def scalar():
+                    return None
+
+            return FakeResult()
+
+    class FakeEngine:
+        def connect(self):
+            return FakeConnection()
+
+    def fake_create_engine(url, isolation_level=None):
+        calls.append({"url": str(url), "isolation_level": isolation_level})
+        return FakeEngine()
+
+    monkeypatch.setattr("sqlalchemy.create_engine", fake_create_engine)
+
+    cli.create_database(
+        _settings(
+            SQLALCHEMY_DATABASE_URI="postgresql+psycopg://developer:secret@db.example:5432/talaragapi",
+            DB_ADMIN_DATABASE="template1",
+        )
+    )
+
+    assert calls[0] == {
+        "url": "postgresql+psycopg://developer:***@db.example:5432/template1",
+        "isolation_level": "AUTOCOMMIT",
+    }
+    assert calls[1]["params"] == {"name": "talaragapi"}
+    assert "CREATE DATABASE" in calls[2]["statement"]
+
+
 def test_check_environment_accepts_database_url_for_local_storage(monkeypatch):
     monkeypatch.setenv("SECRET_KEY", "test-secret")
     monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://postgres:postgres@localhost:5432/talaragapi_test")

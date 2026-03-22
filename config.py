@@ -24,6 +24,7 @@ EXPORTED_ENV_VARS = [
     "API_PREFIX",
     "SECRET_KEY",
     "DATABASE_URL",
+    "DB_ADMIN_DATABASE",
     "AWS_ACCESS_KEY_ID",
     "AWS_SECRET_ACCESS_KEY",
     "AWS_REGION",
@@ -145,6 +146,7 @@ class Config:
             "postgresql+psycopg://postgres:postgres@localhost:5432/talaragapi_development",
         ),
     )
+    DB_ADMIN_DATABASE = os.getenv("DB_ADMIN_DATABASE", "postgres")
     SECRET_KEY = os.getenv("SECRET_KEY", "default-api-fast-secret")
     AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
     AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")

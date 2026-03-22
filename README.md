@@ -91,6 +91,7 @@ Important variables:
 - `APP_ENV`: active environment, usually `development` or `test`
 - `SECRET_KEY`: JWT signing key
 - `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`: PostgreSQL settings
+- `DB_ADMIN_DATABASE`: existing PostgreSQL database used by `db.create` for the initial admin connection. Defaults to `postgres`.
 - `DATABASE_URL`: optional full database URL override
 - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`: AWS credentials and region for S3 or SQS connections
 - `STORAGE_*`: local or S3-backed file storage settings
