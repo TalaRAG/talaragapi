@@ -22,6 +22,47 @@ Run specs with:
 python -m app.cli spec
 ```
 
+## Docker Compose
+
+For Docker-based runs, use `.env.production` and pass it explicitly with `--env-file` so the app boots with `APP_ENV=production`.
+Review and update `.env.production` before the first build, especially `SECRET_KEY` and the external database connection values.
+
+Build the application image:
+
+```bash
+docker compose --env-file .env.production build
+```
+
+With this setup, Docker Compose only runs the API container. Your production database must already be reachable from the app container using the credentials in `.env.production`.
+
+Create and migrate the production database from the app container:
+
+```bash
+docker compose --env-file .env.production run --rm app python -m app.cli db.create
+docker compose --env-file .env.production run --rm app python -m app.cli db.upgrade
+```
+
+If you also want to load the default admin seed:
+
+```bash
+docker compose --env-file .env.production run --rm app python -m app.cli db.seed
+```
+
+Start the full stack:
+
+```bash
+docker compose --env-file .env.production up -d
+```
+
+Run future migration-related commands through Docker with the same env file:
+
+```bash
+docker compose --env-file .env.production run --rm app python -m app.cli db.upgrade
+docker compose --env-file .env.production run --rm app python -m app.cli db.downgrade --revision -1
+docker compose --env-file .env.production run --rm app python -m app.cli db.current
+docker compose --env-file .env.production run --rm app python -m app.cli db.history
+```
+
 ## High-Level Setup
 
 ## 1. Install dependencies
