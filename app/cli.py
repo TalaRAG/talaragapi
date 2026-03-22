@@ -164,9 +164,7 @@ def run_db_current(_args):
 
 
 def run_routes(_args):
-    settings = _active_settings()
-    print(f"Mounted API prefix: {settings.API_PREFIX}")
-    print("Routes: /health, /login, /users, /uploads, /files/{key}")
+    print("Routes: /health, /login, /users, /documents, /public/documents, /public/document_types, /inquire, /uploads, /files/{key}")
     return 0
 
 

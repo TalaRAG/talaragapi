@@ -33,3 +33,9 @@ def require_active_user(current_user: User = Depends(get_current_user)):
     if current_user.status == "inactive":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="unauthorized")
     return current_user
+
+
+def require_admin_user(request: Request, current_user: User = Depends(require_active_user)):
+    if not current_user.admin(request.app.state.settings.ADMIN_EMAILS):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="admin required")
+    return current_user

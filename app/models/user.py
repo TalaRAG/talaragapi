@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -20,6 +20,7 @@ class User(Base):
     first_name: Mapped[str] = mapped_column(String(255), nullable=False)
     last_name: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
+    is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -39,6 +40,7 @@ class User(Base):
             "last_name": self.last_name,
             "full_name": self.full_name(),
             "status": self.status,
+            "is_admin": self.is_admin,
         }
 
     def active(self):
@@ -52,3 +54,6 @@ class User(Base):
 
     def soft_delete(self):
         self.status = "deleted"
+
+    def admin(self, admin_emails=None):
+        return self.is_admin or self.email in (admin_emails or [])

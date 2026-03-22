@@ -18,6 +18,7 @@ def init_storage(settings):
         root = Path(settings.STORAGE_LOCAL_ROOT).resolve()
         root.mkdir(parents=True, exist_ok=True)
     elif service == "s3":
+        _validate_s3_settings(settings)
         _get_s3_client(settings)
     else:
         raise ValueError(f"Unsupported STORAGE_SERVICE: {service}")
@@ -29,6 +30,27 @@ def store_file(upload: UploadFile, settings, filename=None):
         return _store_local(upload, settings, filename)
     if service == "s3":
         return _store_s3(upload, settings, filename)
+    raise ValueError(f"Unsupported STORAGE_SERVICE: {service}")
+
+
+def delete_file(key, settings):
+    service = settings.STORAGE_SERVICE
+    if service == "local":
+        return _delete_local(key, settings)
+    if service == "s3":
+        return _delete_s3(key, settings)
+    raise ValueError(f"Unsupported STORAGE_SERVICE: {service}")
+
+
+def build_public_url(key, settings):
+    service = settings.STORAGE_SERVICE
+    if service == "local":
+        public_endpoint = settings.STORAGE_LOCAL_PUBLIC_ENDPOINT.rstrip("/")
+        return f"{public_endpoint}/{quote(key)}"
+    if service == "s3":
+        bucket = settings.STORAGE_S3_BUCKET
+        client = _get_s3_client(settings)
+        return _build_s3_public_url(bucket, key, settings, client)
     raise ValueError(f"Unsupported STORAGE_SERVICE: {service}")
 
 
@@ -56,16 +78,13 @@ def _store_local(upload, settings, filename=None):
         upload.file.seek(0)
         shutil.copyfileobj(upload.file, handle)
 
-    public_endpoint = settings.STORAGE_LOCAL_PUBLIC_ENDPOINT.rstrip("/")
-    public_url = f"{public_endpoint}/{quote(key)}"
+    public_url = build_public_url(key, settings)
     return _file_result(key, safe_name, upload.content_type, target_path.stat().st_size, public_url)
 
 
 def _store_s3(upload, settings, filename=None):
+    _validate_s3_settings(settings)
     bucket = settings.STORAGE_S3_BUCKET
-    if not bucket:
-        raise ValueError("STORAGE_S3_BUCKET must be set when STORAGE_SERVICE=s3")
-
     safe_name = _build_filename(upload.filename, filename)
     key = _build_key(safe_name, settings.STORAGE_S3_PREFIX)
     client = _get_s3_client(settings)
@@ -107,6 +126,28 @@ def _build_s3_public_url(bucket, key, settings, client):
         Params={"Bucket": bucket, "Key": key},
         ExpiresIn=int(settings.STORAGE_S3_PRESIGNED_EXPIRES_IN),
     )
+
+
+def _delete_local(key, settings):
+    root = Path(settings.STORAGE_LOCAL_ROOT).resolve()
+    target_path = (root / key).resolve()
+    if root not in target_path.parents and target_path != root:
+        return
+    if target_path.exists() and target_path.is_file():
+        target_path.unlink()
+
+
+def _delete_s3(key, settings):
+    bucket = settings.STORAGE_S3_BUCKET
+    if not bucket:
+        return
+    client = _get_s3_client(settings)
+    client.delete_object(Bucket=bucket, Key=key)
+
+
+def _validate_s3_settings(settings):
+    if not settings.STORAGE_S3_BUCKET:
+        raise ValueError("STORAGE_S3_BUCKET must be set when STORAGE_SERVICE=s3")
 
 
 def _get_s3_client(settings):
