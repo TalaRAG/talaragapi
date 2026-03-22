@@ -1,0 +1,10 @@
+from spec.factories import UserFactory
+
+
+def test_show_user(client, auth_headers, db_session):
+    user = UserFactory()
+
+    response = client.get(f"/users/{user.id}", headers=auth_headers)
+
+    assert response.status_code == 200
+    assert response.json()["id"] == user.id
