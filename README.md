@@ -34,6 +34,8 @@ docker compose --env-file .env.production build
 ```
 
 With this setup, Docker Compose only runs the API container. Your production database must already be reachable from the app container using the credentials in `.env.production`.
+If the database is running on the Docker host, set `DB_HOST=host.docker.internal`. The bundled Compose file maps that hostname to Docker's host gateway so it also resolves on Linux.
+If the database runs in another container on the same Compose project or Docker network, use that container or service name instead of `host.docker.internal`.
 
 Create and migrate the production database from the app container:
 
