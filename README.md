@@ -96,6 +96,7 @@ Important variables:
 - `DATABASE_URL`: optional full database URL override
 - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`: AWS credentials and region for S3 or SQS connections
 - `STORAGE_*`: local or S3-backed file storage settings
+  `STORAGE_MAX_CONTENT_LENGTH_MB` defaults to `500`
 - `SQS_QUEUE`: queue name or URL for background message publishing
 
 With the default values, the app expects PostgreSQL databases named:
