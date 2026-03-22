@@ -24,6 +24,9 @@ EXPORTED_ENV_VARS = [
     "API_PREFIX",
     "SECRET_KEY",
     "DATABASE_URL",
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_REGION",
     "STORAGE_SERVICE",
     "STORAGE_LOCAL_ROOT",
     "STORAGE_LOCAL_PUBLIC_ENDPOINT",
@@ -42,6 +45,39 @@ EXPORTED_ENV_VARS = [
     "INFERENCE_TOP_K_DEFAULT",
     "INFERENCE_STREAM_CHUNK_SIZE",
     "OPENAI_API_KEY",
+    "OPENAI_BASE_URL",
+    "OPENAI_MODEL",
+    "OPENAI_TIMEOUT_SECONDS",
+    "LLAMA_CPP_MODEL_PATH",
+    "LLAMA_CPP_CHAT_FORMAT",
+    "LLAMA_CPP_N_CTX",
+    "LLAMA_CPP_N_THREADS",
+    "LLAMA_CPP_N_GPU_LAYERS",
+    "LLAMA_CPP_TEMPERATURE",
+    "LLAMA_CPP_MAX_TOKENS",
+]
+PUBLIC_EXPORTED_ENV_VARS = [
+    "APP_NAME",
+    "APP_ENV",
+    "API_PREFIX",
+    "AWS_REGION",
+    "STORAGE_SERVICE",
+    "STORAGE_LOCAL_ROOT",
+    "STORAGE_LOCAL_PUBLIC_ENDPOINT",
+    "STORAGE_S3_BUCKET",
+    "STORAGE_S3_REGION",
+    "STORAGE_S3_ENDPOINT",
+    "STORAGE_S3_PREFIX",
+    "STORAGE_S3_PUBLIC_URL",
+    "STORAGE_S3_PRESIGNED_EXPIRES_IN",
+    "STORAGE_S3_ACL",
+    "STORAGE_MAX_CONTENT_LENGTH_MB",
+    "DOCUMENT_TYPES",
+    "ADMIN_EMAILS",
+    "INFERENCE_PROVIDER",
+    "INFERENCE_SYSTEM_PROMPT",
+    "INFERENCE_TOP_K_DEFAULT",
+    "INFERENCE_STREAM_CHUNK_SIZE",
     "OPENAI_BASE_URL",
     "OPENAI_MODEL",
     "OPENAI_TIMEOUT_SECONDS",
@@ -105,12 +141,15 @@ class Config:
         ),
     )
     SECRET_KEY = os.getenv("SECRET_KEY", "default-api-fast-secret")
+    AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
+    AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+    AWS_REGION = os.getenv("AWS_REGION", "")
 
     STORAGE_SERVICE = os.getenv("STORAGE_SERVICE", "s3")
     STORAGE_LOCAL_ROOT = os.getenv("STORAGE_LOCAL_ROOT", str(Path("storage")))
     STORAGE_LOCAL_PUBLIC_ENDPOINT = os.getenv("STORAGE_LOCAL_PUBLIC_ENDPOINT", "/files")
     STORAGE_S3_BUCKET = os.getenv("STORAGE_S3_BUCKET", "")
-    STORAGE_S3_REGION = os.getenv("STORAGE_S3_REGION", "")
+    STORAGE_S3_REGION = os.getenv("STORAGE_S3_REGION", os.getenv("AWS_REGION", ""))
     STORAGE_S3_ENDPOINT = os.getenv("STORAGE_S3_ENDPOINT", "")
     STORAGE_S3_PREFIX = os.getenv("STORAGE_S3_PREFIX", "")
     STORAGE_S3_PUBLIC_URL = os.getenv("STORAGE_S3_PUBLIC_URL", "")
@@ -153,5 +192,13 @@ class Config:
                 current = cls.SQLALCHEMY_DATABASE_URI
             else:
                 current = getattr(cls, key, os.getenv(key, ""))
+            values[key] = _stringify_env_value(current)
+        return values
+
+    @classmethod
+    def public_environment(cls):
+        values = {}
+        for key in PUBLIC_EXPORTED_ENV_VARS:
+            current = getattr(cls, key, os.getenv(key, ""))
             values[key] = _stringify_env_value(current)
         return values

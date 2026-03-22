@@ -30,4 +30,4 @@ def environment(
     request: Request,
     _current_user: User = Depends(require_admin_user),
 ):
-    return {"variables": request.app.state.settings.exported_environment()}
+    return {"variables": request.app.state.settings.public_environment()}

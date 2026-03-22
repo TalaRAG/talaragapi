@@ -34,6 +34,7 @@ class DocumentFactory(factory.alchemy.SQLAlchemyModelFactory):
     size_bytes = 128
     storage_provider = "local"
     storage_key = factory.Sequence(lambda n: f"documents/document-{n}.txt")
+    status = "pending"
     extracted_text = factory.Faker("paragraph")
     has_embeddings = True
 

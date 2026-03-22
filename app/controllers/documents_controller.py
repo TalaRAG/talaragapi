@@ -51,6 +51,7 @@ def create(
     name: str | None = Form(default=None),
     description: str | None = Form(default=None),
     document_type: str | None = Form(default=None),
+    status: str | None = Form(default=None),
     file: UploadFile | None = File(default=None),
     _current_user: User = Depends(require_active_user),
     session: Session = Depends(get_db),
@@ -61,6 +62,7 @@ def create(
         name=name,
         description=description,
         document_type=document_type,
+        status=status,
         file=file,
     )
     cmd.execute()
@@ -77,6 +79,7 @@ def update(
     name: str | None = Form(default=None),
     description: str | None = Form(default=None),
     document_type: str | None = Form(default=None),
+    status: str | None = Form(default=None),
     file: UploadFile | None = File(default=None),
     _current_user: User = Depends(require_active_user),
     session: Session = Depends(get_db),
@@ -92,6 +95,7 @@ def update(
         name=name if name is not None else document.name,
         description=description if description is not None else document.description,
         document_type=document_type if document_type is not None else document.document_type,
+        status=status if status is not None else document.status,
         file=file,
     )
     cmd.execute()

@@ -1,4 +1,4 @@
-from app.models.document import Document
+from app.models.document import DOCUMENT_STATUSES, Document
 from app.operations.validator import Validator
 from app.services.document_extractor import extract_text
 from app.storage import delete_file, store_file
@@ -12,6 +12,7 @@ class Save(Validator):
         name=None,
         description=None,
         document_type=None,
+        status=None,
         file=None,
         document=None,
     ):
@@ -21,12 +22,14 @@ class Save(Validator):
         self.name = name
         self.description = description
         self.document_type = document_type
+        self.status = status
         self.file = file
         self.document = document
         self.payload = {
             "name": [],
             "description": [],
             "document_type": [],
+            "status": [],
             "file": [],
             "message": [],
         }
@@ -41,6 +44,7 @@ class Save(Validator):
                 name=self.name.strip(),
                 description=self._normalize_optional_text(self.description),
                 document_type=self._normalize_optional_text(self.document_type),
+                status=self._normalized_status(),
                 original_filename="",
                 content_type=None,
                 size_bytes=None,
@@ -54,6 +58,7 @@ class Save(Validator):
             self.document.name = self.name.strip()
             self.document.description = self._normalize_optional_text(self.description)
             self.document.document_type = self._normalize_optional_text(self.document_type)
+            self.document.status = self._normalized_status()
 
         if self.file is not None:
             previous_key = self.document.storage_key
@@ -91,6 +96,9 @@ class Save(Validator):
         if self.file is not None and not self.file.filename:
             self.payload["file"].append("invalid upload")
 
+        if self.status is not None and self._normalized_status() not in DOCUMENT_STATUSES:
+            self.payload["status"].append("invalid value")
+
         self.count_errors()
 
     def _normalize_optional_text(self, value):
@@ -98,3 +106,8 @@ class Save(Validator):
             return None
         value = value.strip()
         return value or None
+
+    def _normalized_status(self):
+        if self.status is None:
+            return "pending"
+        return self.status.strip()

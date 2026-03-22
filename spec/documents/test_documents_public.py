@@ -4,6 +4,7 @@ def test_public_documents_include_download_url(client, document):
     assert response.status_code == 200
     payload = response.json()
     assert payload["records"][0]["id"] == document.id
+    assert payload["records"][0]["status"] == document.status
     assert payload["records"][0]["download_url"].endswith(document.storage_key)
 
 

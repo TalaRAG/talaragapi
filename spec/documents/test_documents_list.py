@@ -6,3 +6,4 @@ def test_list_documents_returns_paginated_records(client, auth_headers, document
     assert payload["current_page"] == 1
     assert payload["total_pages"] == 1
     assert payload["records"][0]["id"] == document.id
+    assert payload["records"][0]["status"] == document.status

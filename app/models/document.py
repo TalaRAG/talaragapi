@@ -13,6 +13,9 @@ def utcnow():
     return datetime.now(timezone.utc)
 
 
+DOCUMENT_STATUSES = ["pending", "processing", "done"]
+
+
 class Document(Base):
     __tablename__ = "documents"
 
@@ -25,6 +28,7 @@ class Document(Base):
     size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     storage_provider: Mapped[str] = mapped_column(String(50), nullable=False)
     storage_key: Mapped[str] = mapped_column(String(500), nullable=False, unique=True)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
     extracted_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     has_embeddings: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
@@ -52,6 +56,7 @@ class Document(Base):
             "size_bytes": self.size_bytes,
             "storage_provider": self.storage_provider,
             "storage_key": self.storage_key,
+            "status": self.status,
             "has_embeddings": self.has_embeddings,
             "download_url": download_url,
         }

@@ -70,6 +70,7 @@ def document(app, db_session):
         size_bytes=43,
         storage_provider=app.state.settings.STORAGE_SERVICE,
         storage_key="documents/sample-budget.txt",
+        status="done",
         extracted_text="Budget allocation for health and education.",
         has_embeddings=True,
     )

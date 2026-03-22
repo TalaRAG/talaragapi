@@ -9,6 +9,7 @@ cp .env.example .env
 python -m venv env
 source env/bin/activate
 pip install -r requirements.txt
+python -m app.cli doctor
 python -m app.cli db.create
 python -m app.cli db.upgrade
 python -m app.cli db.seed
@@ -48,11 +49,21 @@ Important variables:
 - `SECRET_KEY`: JWT signing key
 - `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`: PostgreSQL settings
 - `DATABASE_URL`: optional full database URL override
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`: AWS credentials and region for S3 or SQS connections
 - `STORAGE_*`: local or S3-backed file storage settings
+- `SQS_QUEUE`: queue name or URL for background message publishing
 
 With the default values, the app expects PostgreSQL databases named:
 - `default_api_fast_development`
 - `default_api_fast_test`
+
+When `STORAGE_SERVICE=s3`, configure `STORAGE_S3_BUCKET` and AWS credentials via `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`. `AWS_REGION` is the default region used for AWS clients; `STORAGE_S3_REGION` remains available as an optional S3-specific override.
+
+Validate your environment, AWS connectivity, and database access with:
+
+```bash
+python -m app.cli doctor
+```
 
 ## 3. Create and migrate the database
 Create the configured development database:

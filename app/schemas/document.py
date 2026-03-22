@@ -11,6 +11,7 @@ class DocumentOut(BaseModel):
     size_bytes: int | None = None
     storage_provider: str
     storage_key: str
+    status: str
     has_embeddings: bool
     download_url: str | None = None
 

@@ -155,7 +155,7 @@ def _get_s3_client(settings):
     if _storage_s3_client is not None:
         return _storage_s3_client
 
-    region = settings.STORAGE_S3_REGION or None
+    region = settings.STORAGE_S3_REGION or getattr(settings, "AWS_REGION", "") or None
     endpoint = settings.STORAGE_S3_ENDPOINT or None
     _storage_s3_client = boto3.client("s3", region_name=region, endpoint_url=endpoint)
     return _storage_s3_client

@@ -12,3 +12,10 @@ def test_environment_returns_backend_variables_for_admin(client, admin_auth_head
     payload = response.json()
     assert payload["variables"]["INFERENCE_PROVIDER"] == "openai"
     assert "DOCUMENT_TYPES" in payload["variables"]
+    assert "AWS_REGION" in payload["variables"]
+    assert "OPENAI_MODEL" in payload["variables"]
+    assert "AWS_ACCESS_KEY_ID" not in payload["variables"]
+    assert "AWS_SECRET_ACCESS_KEY" not in payload["variables"]
+    assert "OPENAI_API_KEY" not in payload["variables"]
+    assert "SECRET_KEY" not in payload["variables"]
+    assert "DATABASE_URL" not in payload["variables"]

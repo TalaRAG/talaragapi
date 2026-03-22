@@ -4,6 +4,7 @@ import signal
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 
 def system_greet():
@@ -187,6 +188,170 @@ def run_routes(_args):
     return 0
 
 
+def _doctor_result(name, status, message):
+    return {"name": name, "status": status, "message": message}
+
+
+def _is_env_set(name):
+    value = os.getenv(name)
+    return value is not None and value.strip() != ""
+
+
+def _configured_sqs_queue():
+    return os.getenv("SQS_QUEUE", "").strip()
+
+
+def _infer_sqs_region(queue):
+    parsed = urlparse(queue)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return ""
+
+    parts = parsed.netloc.split(".")
+    if len(parts) >= 4 and parts[0] == "sqs" and parts[-2:] == ["amazonaws", "com"]:
+        return parts[1]
+    return ""
+
+
+def _check_environment(settings):
+    missing = []
+    queue = _configured_sqs_queue()
+    if not _is_env_set("SECRET_KEY"):
+        missing.append("SECRET_KEY")
+
+    if not _is_env_set("DATABASE_URL"):
+        for key in ["DB_NAME", "DB_USERNAME", "DB_PASSWORD", "DB_HOST", "DB_PORT"]:
+            if not _is_env_set(key):
+                missing.append(key)
+
+    needs_aws_credentials = settings.STORAGE_SERVICE == "s3" or bool(queue)
+    if needs_aws_credentials:
+        for key in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]:
+            if not _is_env_set(key):
+                missing.append(key)
+
+    if settings.STORAGE_SERVICE == "s3" and not (settings.STORAGE_S3_REGION or _is_env_set("AWS_REGION")):
+        missing.append("AWS_REGION or STORAGE_S3_REGION")
+
+    if queue and not (_is_env_set("AWS_REGION") or _infer_sqs_region(queue)):
+        missing.append("AWS_REGION")
+
+    if settings.STORAGE_SERVICE == "s3" and not settings.STORAGE_S3_BUCKET:
+        missing.append("STORAGE_S3_BUCKET")
+
+    if missing:
+        return _doctor_result(
+            "environment",
+            "fail",
+            f"missing required variables: {', '.join(sorted(set(missing)))}",
+        )
+
+    return _doctor_result("environment", "pass", "required environment variables are set")
+
+
+def _infer_sqs_endpoint_url(queue):
+    parsed = urlparse(queue)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None
+    if parsed.netloc.endswith("amazonaws.com"):
+        return None
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
+def _check_s3(settings):
+    if settings.STORAGE_SERVICE != "s3":
+        return _doctor_result("s3", "skip", "storage service is not configured for S3")
+
+    import boto3
+    from botocore.exceptions import BotoCoreError, ClientError
+
+    region = settings.STORAGE_S3_REGION or getattr(settings, "AWS_REGION", "") or None
+    endpoint = settings.STORAGE_S3_ENDPOINT or None
+
+    try:
+        client = boto3.client("s3", region_name=region, endpoint_url=endpoint)
+        client.head_bucket(Bucket=settings.STORAGE_S3_BUCKET)
+    except (BotoCoreError, ClientError, ValueError) as exc:
+        return _doctor_result("s3", "fail", str(exc))
+
+    target = settings.STORAGE_S3_BUCKET
+    if endpoint:
+        target = f"{target} via {endpoint}"
+    return _doctor_result("s3", "pass", f"reachable bucket: {target}")
+
+
+def _resolve_sqs_queue_url(client, queue):
+    if queue.startswith("http://") or queue.startswith("https://"):
+        return queue
+    response = client.get_queue_url(QueueName=queue)
+    return response["QueueUrl"]
+
+
+def _check_sqs(settings):
+    queue = _configured_sqs_queue()
+    if not queue:
+        return _doctor_result("sqs", "skip", "SQS_QUEUE is not configured")
+
+    import boto3
+    from botocore.exceptions import BotoCoreError, ClientError
+
+    region = getattr(settings, "AWS_REGION", "") or _infer_sqs_region(queue) or None
+    endpoint = _infer_sqs_endpoint_url(queue)
+
+    try:
+        client = boto3.client("sqs", region_name=region, endpoint_url=endpoint)
+        queue_url = _resolve_sqs_queue_url(client, queue)
+        client.get_queue_attributes(
+            QueueUrl=queue_url,
+            AttributeNames=["QueueArn"],
+        )
+    except (BotoCoreError, ClientError, ValueError, KeyError) as exc:
+        return _doctor_result("sqs", "fail", str(exc))
+
+    return _doctor_result("sqs", "pass", f"reachable queue: {queue_url}")
+
+
+def _check_database(settings):
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.engine import make_url
+
+    try:
+        engine = create_engine(settings.SQLALCHEMY_DATABASE_URI, future=True)
+        try:
+            with engine.connect() as connection:
+                connection.execute(text("SELECT 1"))
+        finally:
+            engine.dispose()
+    except Exception as exc:
+        return _doctor_result("database", "fail", str(exc))
+
+    url = make_url(settings.SQLALCHEMY_DATABASE_URI)
+    database_name = url.database or settings.SQLALCHEMY_DATABASE_URI
+    return _doctor_result("database", "pass", f"reachable database: {database_name}")
+
+
+def _print_doctor_results(results, app_env):
+    print(f"Doctor checks (APP_ENV={app_env})")
+    for result in results:
+        print(f"[{result['status'].upper()}] {result['name']}: {result['message']}")
+
+    passed = sum(1 for result in results if result["status"] == "pass")
+    failed = sum(1 for result in results if result["status"] == "fail")
+    skipped = sum(1 for result in results if result["status"] == "skip")
+    print(f"Summary: {passed} passed, {failed} failed, {skipped} skipped")
+
+
+def run_doctor(_args):
+    settings = _active_settings()
+    results = [
+        _check_environment(settings),
+        _check_s3(settings),
+        _check_sqs(settings),
+        _check_database(settings),
+    ]
+    _print_doctor_results(results, settings.APP_ENV)
+    return 1 if any(result["status"] == "fail" for result in results) else 0
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="python -m app.cli",
@@ -236,6 +401,9 @@ def build_parser():
 
     db_seed_parser = subparsers.add_parser("db.seed", help="Seed the configured database")
     db_seed_parser.set_defaults(handler=run_db_seed)
+
+    doctor_parser = subparsers.add_parser("doctor", help="Validate environment and service connectivity")
+    doctor_parser.set_defaults(handler=run_doctor)
 
     routes_parser = subparsers.add_parser("routes", help="Print mounted routes")
     routes_parser.set_defaults(handler=run_routes)
