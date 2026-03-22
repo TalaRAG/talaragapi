@@ -1,21 +1,25 @@
+import logging
+
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.dependencies.auth import require_active_user
+from app.dependencies.auth import require_active_user, require_admin_user
 from app.models.document import Document
 from app.models.user import User
 from app.operations.documents.save import Save as SaveDocument
 from app.operations.system.inquire import Inquire
 from app.schemas.document import DocumentCollection, DocumentOut
 from app.schemas.system import InquirePayload
+from app.services.document_queue import configured_sqs_queue, enqueue_document
 from app.storage import build_public_url, delete_file
 
 
 ITEMS_PER_PAGE = 20
 router = APIRouter(tags=["documents"])
+logger = logging.getLogger("talaragapi")
 
 
 @router.get("/documents", response_model=DocumentCollection)
@@ -68,6 +72,7 @@ def create(
     cmd.execute()
 
     if cmd.valid():
+        _enqueue_document_if_pending(cmd.document, request.app.state.settings)
         return _serialize_document(cmd.document, request.app.state.settings)
     return JSONResponse(status_code=422, content=cmd.payload)
 
@@ -101,6 +106,7 @@ def update(
     cmd.execute()
 
     if cmd.valid():
+        _enqueue_document_if_pending(cmd.document, request.app.state.settings, file_uploaded=file is not None)
         return _serialize_document(cmd.document, request.app.state.settings)
     return JSONResponse(status_code=422, content=cmd.payload)
 
@@ -122,6 +128,31 @@ def delete(
     if storage_key:
         delete_file(storage_key, request.app.state.settings)
     return {"message": "ok"}
+
+
+@router.post("/documents/{document_id}/rerun", response_model=DocumentOut)
+def rerun(
+    request: Request,
+    document_id: str,
+    _current_user: User = Depends(require_admin_user),
+    session: Session = Depends(get_db),
+):
+    document = session.get(Document, document_id)
+    if document is None:
+        return JSONResponse(status_code=404, content={"message": "not found"})
+    if document.status != "pending":
+        logger.warning("Rejected rerun for document_id=%s because status=%s", document.id, document.status)
+        return JSONResponse(status_code=422, content={"message": "document must be pending"})
+    if not document.storage_key:
+        logger.warning("Rejected rerun for document_id=%s because storage_key is missing", document.id)
+        return JSONResponse(status_code=422, content={"message": "document is missing a storage key"})
+    if not configured_sqs_queue():
+        logger.warning("Rejected rerun for document_id=%s because SQS_QUEUE is not configured", document.id)
+        return JSONResponse(status_code=503, content={"message": "SQS_QUEUE is not configured"})
+
+    logger.info("Re-run requested for document_id=%s key=%s", document.id, document.storage_key)
+    enqueue_document(request.app.state.settings, document.id, document.storage_key)
+    return _serialize_document(document, request.app.state.settings)
 
 
 @router.get("/public/documents", response_model=DocumentCollection)
@@ -207,6 +238,18 @@ def _document_filters(*, query=None, document_type=None):
 
 def _serialize_document(document, settings):
     return document.to_dict(download_url=build_public_url(document.storage_key, settings))
+
+
+def _enqueue_document_if_pending(document, settings, file_uploaded=True):
+    if not file_uploaded:
+        return False
+    if document.status != "pending":
+        return False
+    if not document.storage_key:
+        return False
+    if not configured_sqs_queue():
+        return False
+    return enqueue_document(settings, document.id, document.storage_key)
 
 
 def _stream_text(text, chunk_size):
