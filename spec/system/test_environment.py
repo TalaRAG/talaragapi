@@ -5,7 +5,11 @@ def test_environment_requires_admin_user(client, auth_headers):
     assert response.json() == {"detail": "admin required"}
 
 
-def test_environment_returns_backend_variables_for_admin(client, admin_auth_headers):
+def test_environment_returns_backend_variables_for_admin(client, admin_auth_headers, monkeypatch):
+    monkeypatch.setattr("config.Config.AWS_ACCESS_KEY_ID", "test-access-key")
+    monkeypatch.setattr("config.Config.AWS_SECRET_ACCESS_KEY", "test-secret-key")
+    monkeypatch.setattr("config.Config.OPENAI_API_KEY", "")
+
     response = client.get("/system/environment", headers=admin_auth_headers)
 
     assert response.status_code == 200
@@ -19,3 +23,6 @@ def test_environment_returns_backend_variables_for_admin(client, admin_auth_head
     assert "OPENAI_API_KEY" not in payload["variables"]
     assert "SECRET_KEY" not in payload["variables"]
     assert "DATABASE_URL" not in payload["variables"]
+    assert payload["secret_statuses"]["AWS_ACCESS_KEY_ID"] is True
+    assert payload["secret_statuses"]["AWS_SECRET_ACCESS_KEY"] is True
+    assert payload["secret_statuses"]["OPENAI_API_KEY"] is False

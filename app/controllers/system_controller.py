@@ -30,4 +30,7 @@ def environment(
     request: Request,
     _current_user: User = Depends(require_admin_user),
 ):
-    return {"variables": request.app.state.settings.public_environment()}
+    return {
+        "variables": request.app.state.settings.public_environment(),
+        "secret_statuses": request.app.state.settings.secret_statuses(),
+    }

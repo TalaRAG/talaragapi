@@ -18,3 +18,4 @@ class InquirePayload(BaseModel):
 
 class EnvironmentResponse(BaseModel):
     variables: dict[str, str]
+    secret_statuses: dict[str, bool]

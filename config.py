@@ -89,6 +89,11 @@ PUBLIC_EXPORTED_ENV_VARS = [
     "LLAMA_CPP_TEMPERATURE",
     "LLAMA_CPP_MAX_TOKENS",
 ]
+SECRET_STATUS_ENV_VARS = [
+    "OPENAI_API_KEY",
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+]
 
 
 def _expand_env_vars(value):
@@ -202,3 +207,11 @@ class Config:
             current = getattr(cls, key, os.getenv(key, ""))
             values[key] = _stringify_env_value(current)
         return values
+
+    @classmethod
+    def secret_statuses(cls):
+        statuses = {}
+        for key in SECRET_STATUS_ENV_VARS:
+            current = getattr(cls, key, os.getenv(key, ""))
+            statuses[key] = bool(str(current or "").strip())
+        return statuses
