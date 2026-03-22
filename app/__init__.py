@@ -21,18 +21,19 @@ def create_app(config_object="config.Config"):
     app = FastAPI(title=settings.APP_NAME)
     app.state.settings = settings
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
     db.configure(settings.SQLALCHEMY_DATABASE_URI)
     init_storage(settings)
 
     from app.routes import register_routes
 
     register_routes(app)
-    return app
+    wrapped_app = CORSMiddleware(
+        app=app,
+        allow_origins=settings.CORS_ALLOW_ORIGINS,
+        allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
+        allow_methods=settings.CORS_ALLOW_METHODS,
+        allow_headers=settings.CORS_ALLOW_HEADERS,
+        max_age=settings.CORS_MAX_AGE,
+    )
+    wrapped_app.state = app.state
+    return wrapped_app

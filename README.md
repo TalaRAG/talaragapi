@@ -90,6 +90,7 @@ By default, the project reads:
 Important variables:
 - `APP_ENV`: active environment, usually `development` or `test`
 - `SECRET_KEY`: JWT signing key
+- `CORS_ALLOW_ORIGINS`, `CORS_ALLOW_METHODS`, `CORS_ALLOW_HEADERS`, `CORS_ALLOW_CREDENTIALS`, `CORS_MAX_AGE`: browser cross-origin settings for the API
 - `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`: PostgreSQL settings
 - `DB_ADMIN_DATABASE`: existing PostgreSQL database used by `db.create` for the initial admin connection. Defaults to `postgres`.
 - `DATABASE_URL`: optional full database URL override

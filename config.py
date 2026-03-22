@@ -22,6 +22,11 @@ EXPORTED_ENV_VARS = [
     "APP_NAME",
     "APP_ENV",
     "API_PREFIX",
+    "CORS_ALLOW_ORIGINS",
+    "CORS_ALLOW_METHODS",
+    "CORS_ALLOW_HEADERS",
+    "CORS_ALLOW_CREDENTIALS",
+    "CORS_MAX_AGE",
     "SECRET_KEY",
     "DATABASE_URL",
     "DB_ADMIN_DATABASE",
@@ -61,6 +66,11 @@ PUBLIC_EXPORTED_ENV_VARS = [
     "APP_NAME",
     "APP_ENV",
     "API_PREFIX",
+    "CORS_ALLOW_ORIGINS",
+    "CORS_ALLOW_METHODS",
+    "CORS_ALLOW_HEADERS",
+    "CORS_ALLOW_CREDENTIALS",
+    "CORS_MAX_AGE",
     "AWS_REGION",
     "STORAGE_SERVICE",
     "STORAGE_LOCAL_ROOT",
@@ -114,6 +124,11 @@ def _parse_csv(value, default=None):
     return [entry.strip() for entry in str(raw).split(",") if entry.strip()]
 
 
+def _parse_bool(value, default=False):
+    raw = value if value is not None else default
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _stringify_env_value(value):
     if isinstance(value, list):
         return ",".join(value)
@@ -137,6 +152,11 @@ class Config:
     APP_NAME = os.getenv("APP_NAME", "talaragapi")
     APP_ENV = os.getenv("APP_ENV", "development")
     API_PREFIX = os.getenv("API_PREFIX", "")
+    CORS_ALLOW_ORIGINS = _parse_csv(os.getenv("CORS_ALLOW_ORIGINS"), "*")
+    CORS_ALLOW_METHODS = _parse_csv(os.getenv("CORS_ALLOW_METHODS"), "*")
+    CORS_ALLOW_HEADERS = _parse_csv(os.getenv("CORS_ALLOW_HEADERS"), "*")
+    CORS_ALLOW_CREDENTIALS = _parse_bool(os.getenv("CORS_ALLOW_CREDENTIALS"), True)
+    CORS_MAX_AGE = int(os.getenv("CORS_MAX_AGE", "600"))
 
     _db_config = _load_database_config()
     SQLALCHEMY_DATABASE_URI = os.getenv(

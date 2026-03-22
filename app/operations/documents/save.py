@@ -62,10 +62,11 @@ class Save(Validator):
 
         if self.file is not None:
             previous_key = self.document.storage_key
-            result = store_file(self.file, self.settings, filename=self.file.filename)
             self.file.file.seek(0)
             content = self.file.file.read()
             extracted_text = extract_text(self.file.filename, self.file.content_type, content)
+            self.file.file.seek(0)
+            result = store_file(self.file, self.settings, filename=self.file.filename)
 
             self.document.original_filename = result["filename"]
             self.document.content_type = result["content_type"]

@@ -24,6 +24,39 @@ def test_create_document(client, auth_headers):
     assert payload["has_embeddings"] is True
 
 
+def test_create_document_still_succeeds_when_storage_closes_upload_stream(client, app, auth_headers, monkeypatch):
+    def fake_store_file(upload, _settings, filename=None):
+        content = upload.file.read()
+        upload.file.close()
+        return {
+            "key": "documents/closed-stream.txt",
+            "filename": filename or upload.filename,
+            "content_type": upload.content_type,
+            "byte_size": len(content),
+            "url": "https://downloads.example/documents/closed-stream.txt",
+        }
+
+    monkeypatch.setattr("app.operations.documents.save.store_file", fake_store_file)
+
+    response = client.post(
+        "/documents",
+        headers=auth_headers,
+        data={
+            "name": "2026 National Budget",
+            "description": "Executive summary",
+            "document_type": "national_budget",
+        },
+        files={
+            "file": ("budget.txt", b"Budget allocation for health and education.", "text/plain"),
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["storage_key"] == "documents/closed-stream.txt"
+    assert payload["has_embeddings"] is True
+
+
 def test_create_document_enqueues_pending_document(client, auth_headers, monkeypatch):
     enqueued = []
 
