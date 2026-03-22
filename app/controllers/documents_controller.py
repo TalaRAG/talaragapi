@@ -140,15 +140,21 @@ def rerun(
     document = session.get(Document, document_id)
     if document is None:
         return JSONResponse(status_code=404, content={"message": "not found"})
-    if document.status != "pending":
+    if document.status not in {"pending", "failed"}:
         logger.warning("Rejected rerun for document_id=%s because status=%s", document.id, document.status)
-        return JSONResponse(status_code=422, content={"message": "document must be pending"})
+        return JSONResponse(status_code=422, content={"message": "document must be pending or failed"})
     if not document.storage_key:
         logger.warning("Rejected rerun for document_id=%s because storage_key is missing", document.id)
         return JSONResponse(status_code=422, content={"message": "document is missing a storage key"})
     if not configured_sqs_queue():
         logger.warning("Rejected rerun for document_id=%s because SQS_QUEUE is not configured", document.id)
         return JSONResponse(status_code=503, content={"message": "SQS_QUEUE is not configured"})
+
+    if document.status == "failed":
+        document.status = "pending"
+        session.add(document)
+        session.commit()
+        session.refresh(document)
 
     logger.info("Re-run requested for document_id=%s key=%s", document.id, document.storage_key)
     enqueue_document(request.app.state.settings, document.id, document.storage_key)
