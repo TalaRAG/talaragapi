@@ -1,4 +1,6 @@
-from sqlalchemy import create_engine
+from psycopg import ProgrammingError
+from pgvector.psycopg import register_vector
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 
@@ -16,6 +18,15 @@ class DatabaseManager:
             self.engine.dispose()
 
         self.engine = create_engine(database_url, future=True)
+        if self.engine.dialect.name == "postgresql":
+            @event.listens_for(self.engine, "connect")
+            def _register_pgvector(dbapi_connection, _connection_record):
+                try:
+                    register_vector(dbapi_connection)
+                except ProgrammingError:
+                    # The extension may not exist yet on freshly created databases.
+                    pass
+
         self.session_factory = sessionmaker(
             bind=self.engine,
             autoflush=False,

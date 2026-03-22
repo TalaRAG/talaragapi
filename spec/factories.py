@@ -1,6 +1,7 @@
 import factory
 
 from app.models.document import Document
+from app.models.document_embedding import DocumentEmbedding
 from app.helpers.api_helpers import build_password_hash
 from app.models.user import User
 
@@ -35,3 +36,17 @@ class DocumentFactory(factory.alchemy.SQLAlchemyModelFactory):
     storage_key = factory.Sequence(lambda n: f"documents/document-{n}.txt")
     extracted_text = factory.Faker("paragraph")
     has_embeddings = True
+
+
+class DocumentEmbeddingFactory(factory.alchemy.SQLAlchemyModelFactory):
+    class Meta:
+        model = DocumentEmbedding
+        sqlalchemy_session = None
+        sqlalchemy_session_persistence = "commit"
+
+    document = factory.SubFactory(DocumentFactory)
+    chunk_index = factory.Sequence(lambda n: n)
+    content = factory.Faker("paragraph")
+    embedding = factory.LazyFunction(lambda: [0.1, 0.2, 0.3])
+    embedding_model = "text-embedding-3-small"
+    dimensions = factory.LazyAttribute(lambda entry: len(entry.embedding))

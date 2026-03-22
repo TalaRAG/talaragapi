@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from datetime import datetime, timezone
 from uuid import uuid4
 
 from sqlalchemy import Boolean, DateTime, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
 
@@ -31,6 +33,12 @@ class Document(Base):
         nullable=False,
         default=utcnow,
         onupdate=utcnow,
+    )
+    embeddings: Mapped[list["DocumentEmbedding"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="DocumentEmbedding.chunk_index",
     )
 
     def to_dict(self, download_url=None):

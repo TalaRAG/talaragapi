@@ -4,6 +4,7 @@ gunicorn
 SQLAlchemy
 alembic
 psycopg[binary]
+pgvector
 python-dotenv
 PyYAML
 PyJWT

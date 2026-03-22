@@ -78,6 +78,8 @@ email: admin@example.com
 password: password
 ```
 
+For document embeddings, PostgreSQL must have the `pgvector` extension available. The document embeddings migration enables it with `CREATE EXTENSION IF NOT EXISTS vector`, so your Postgres server needs the extension installed.
+
 ## 4. Run specs
 Run the full spec suite:
 
